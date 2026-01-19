@@ -71,7 +71,6 @@ jobs:
           mkdir -p release
           mv artifacts/opm-linux-x64/opm-linux-x64 release/
           mv artifacts/opm-macos-arm64/opm-macos-arm64 release/
-          mv artifacts/opm-macos-x64/opm-macos-x64 release/
           mv artifacts/opm-windows-x64.exe/opm-windows-x64.exe release/
           chmod +x release/opm-*
           ls -la release/
@@ -95,7 +94,6 @@ jobs:
           files: |
             release/opm-linux-x64
             release/opm-macos-arm64
-            release/opm-macos-x64
             release/opm-windows-x64.exe
           draft: false
           prerelease: false
