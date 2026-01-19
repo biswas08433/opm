@@ -19,9 +19,6 @@ jobs:
           - os: macos-latest
             target: bun-darwin-arm64
             artifact: opm-macos-arm64
-          - os: macos-13
-            target: bun-darwin-x64
-            artifact: opm-macos-x64
           - os: windows-latest
             target: bun-windows-x64
             artifact: opm-windows-x64.exe
