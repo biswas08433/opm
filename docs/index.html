@@ -1,0 +1,347 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>opm - Odin Package Manager</title>
+    <meta
+      name="description"
+      content="A fast CLI tool for managing Odin projects, packages, and compiler versions"
+    />
+    <meta
+      name="keywords"
+      content="odin, package manager, version manager, cli, odin-lang"
+    />
+    <link rel="stylesheet" href="style.css" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📦</text></svg>"
+    />
+  </head>
+  <body>
+    <header class="hero">
+      <nav class="nav">
+        <div class="nav-brand"><span class="logo">📦</span> opm</div>
+        <div class="nav-links">
+          <a href="#features">Features</a>
+          <a href="#installation">Install</a>
+          <a href="#usage">Usage</a>
+          <a
+            href="https://github.com/biswas08433/opm"
+            target="_blank"
+            rel="noopener"
+            >GitHub</a
+          >
+        </div>
+      </nav>
+
+      <div class="hero-content">
+        <h1>opm</h1>
+        <p class="tagline">The Odin Package Manager</p>
+        <p class="description">
+          A fast CLI tool for managing Odin projects, packages, and compiler
+          versions. Built with Bun for maximum performance.
+        </p>
+        <div class="cta-buttons">
+          <a href="#installation" class="btn btn-primary">Get Started</a>
+          <a
+            href="https://github.com/biswas08433/opm"
+            class="btn btn-secondary"
+            target="_blank"
+            rel="noopener"
+          >
+            View on GitHub
+          </a>
+        </div>
+      </div>
+
+      <div class="terminal-preview">
+        <div class="terminal">
+          <div class="terminal-header">
+            <span class="terminal-dot red"></span>
+            <span class="terminal-dot yellow"></span>
+            <span class="terminal-dot green"></span>
+            <span class="terminal-title">Terminal</span>
+          </div>
+          <div class="terminal-body">
+            <pre><code><span class="prompt">$</span> opm init my-project
+<span class="success">✓</span> Created opm.json
+<span class="success">✓</span> Created project structure
+
+<span class="prompt">$</span> opm add odin-lang/raylib-odin
+<span class="info">ℹ</span> Adding package: raylib
+<span class="success">✓</span> Added raylib to dependencies
+
+<span class="prompt">$</span> opm build
+<span class="info">ℹ</span> odin build src -out:bin/my-project
+<span class="success">✓</span> Build complete</code></pre>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <section id="features" class="features">
+      <h2>Features</h2>
+      <div class="feature-grid">
+        <div class="feature-card">
+          <div class="feature-icon">🔧</div>
+          <h3>Version Management</h3>
+          <p>
+            Install, switch, and manage multiple Odin compiler versions
+            effortlessly.
+          </p>
+          <pre><code>opm install latest
+opm use dev-2025-12
+opm versions</code></pre>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">📦</div>
+          <h3>Package Management</h3>
+          <p>
+            Add dependencies from GitHub repositories or local paths with simple
+            commands.
+          </p>
+          <pre><code>opm add user/repo
+opm add user/repo@v1.0.0
+opm remove package</code></pre>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">🚀</div>
+          <h3>Project Management</h3>
+          <p>
+            Initialize, build, run, and test Odin projects with built-in
+            commands.
+          </p>
+          <pre><code>opm init my-app
+opm build
+opm run</code></pre>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">⚡</div>
+          <h3>Fast & Lightweight</h3>
+          <p>
+            Built with Bun for instant startup times and minimal resource usage.
+          </p>
+          <pre><code># Single binary
+# No runtime dependencies
+# Cross-platform</code></pre>
+        </div>
+      </div>
+    </section>
+
+    <section id="installation" class="installation">
+      <h2>Installation</h2>
+
+      <div class="install-tabs">
+        <button class="tab-btn active" data-tab="linux">Linux</button>
+        <button class="tab-btn" data-tab="macos-arm">
+          macOS (Apple Silicon)
+        </button>
+        <button class="tab-btn" data-tab="macos-intel">macOS (Intel)</button>
+        <button class="tab-btn" data-tab="windows">Windows</button>
+        <button class="tab-btn" data-tab="source">From Source</button>
+      </div>
+
+      <div class="tab-content active" id="linux">
+        <pre><code>curl -L https://github.com/biswas08433/opm/releases/latest/download/opm-linux-x64 -o opm
+chmod +x opm
+sudo mv opm /usr/local/bin/</code></pre>
+      </div>
+
+      <div class="tab-content" id="macos-arm">
+        <pre><code>curl -L https://github.com/biswas08433/opm/releases/latest/download/opm-macos-arm64 -o opm
+chmod +x opm
+sudo mv opm /usr/local/bin/</code></pre>
+      </div>
+
+      <div class="tab-content" id="macos-intel">
+        <pre><code>curl -L https://github.com/biswas08433/opm/releases/latest/download/opm-macos-x64 -o opm
+chmod +x opm
+sudo mv opm /usr/local/bin/</code></pre>
+      </div>
+
+      <div class="tab-content" id="windows">
+        <pre><code># Download from GitHub Releases
+# https://github.com/biswas08433/opm/releases/latest
+# Download opm-windows-x64.exe and add to PATH</code></pre>
+      </div>
+
+      <div class="tab-content" id="source">
+        <pre><code>git clone https://github.com/biswas08433/opm.git
+cd opm
+bun install
+bun run build
+sudo mv opm /usr/local/bin/</code></pre>
+      </div>
+
+      <p class="install-note">
+        After installation, set up the Odin compiler path:
+      </p>
+      <pre><code>export PATH="$HOME/.opm/current:$PATH"</code></pre>
+    </section>
+
+    <section id="usage" class="usage">
+      <h2>Quick Start</h2>
+
+      <div class="usage-steps">
+        <div class="step">
+          <div class="step-number">1</div>
+          <div class="step-content">
+            <h3>Install the Odin Compiler</h3>
+            <pre><code>opm install latest
+opm use latest</code></pre>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-number">2</div>
+          <div class="step-content">
+            <h3>Create a New Project</h3>
+            <pre><code>opm init my-project
+cd my-project</code></pre>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-number">3</div>
+          <div class="step-content">
+            <h3>Add Dependencies</h3>
+            <pre><code>opm add odin-lang/raylib-odin
+opm add some-user/cool-library@v1.0.0</code></pre>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-number">4</div>
+          <div class="step-content">
+            <h3>Build & Run</h3>
+            <pre><code>opm build
+opm run</code></pre>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="commands">
+      <h2>Commands Reference</h2>
+      <div class="commands-table">
+        <table>
+          <thead>
+            <tr>
+              <th>Command</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>opm versions</code></td>
+              <td>List available Odin versions</td>
+            </tr>
+            <tr>
+              <td><code>opm install &lt;version&gt;</code></td>
+              <td>Install Odin version</td>
+            </tr>
+            <tr>
+              <td><code>opm use &lt;version&gt;</code></td>
+              <td>Switch to version</td>
+            </tr>
+            <tr>
+              <td><code>opm current</code></td>
+              <td>Show current version</td>
+            </tr>
+            <tr>
+              <td><code>opm init [name]</code></td>
+              <td>Initialize project</td>
+            </tr>
+            <tr>
+              <td><code>opm build</code></td>
+              <td>Build project</td>
+            </tr>
+            <tr>
+              <td><code>opm run</code></td>
+              <td>Run project</td>
+            </tr>
+            <tr>
+              <td><code>opm test</code></td>
+              <td>Run tests</td>
+            </tr>
+            <tr>
+              <td><code>opm add &lt;pkg&gt;</code></td>
+              <td>Add dependency</td>
+            </tr>
+            <tr>
+              <td><code>opm remove &lt;pkg&gt;</code></td>
+              <td>Remove dependency</td>
+            </tr>
+            <tr>
+              <td><code>opm update</code></td>
+              <td>Update dependencies</td>
+            </tr>
+            <tr>
+              <td><code>opm search &lt;query&gt;</code></td>
+              <td>Search packages</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="config">
+      <h2>Project Configuration</h2>
+      <p>Projects use an <code>opm.json</code> file:</p>
+      <pre><code>{
+  "name": "my-project",
+  "version": "0.1.0",
+  "description": "My Odin project",
+  "odinVersion": "dev-2025-12",
+  "dependencies": {
+    "raylib": "odin-lang/raylib-odin"
+  },
+  "scripts": {
+    "build": "odin build src -out:bin/${name}",
+    "run": "odin run src",
+    "test": "odin test tests"
+  },
+  "build": {
+    "src": "src",
+    "out": "bin",
+    "flags": ["-debug"]
+  }
+}</code></pre>
+    </section>
+
+    <footer class="footer">
+      <div class="footer-content">
+        <div class="footer-brand">
+          <span class="logo">📦</span> opm
+          <p>Odin Package Manager</p>
+        </div>
+        <div class="footer-links">
+          <a
+            href="https://github.com/biswas08433/opm"
+            target="_blank"
+            rel="noopener"
+            >GitHub</a
+          >
+          <a
+            href="https://github.com/biswas08433/opm/issues"
+            target="_blank"
+            rel="noopener"
+            >Issues</a
+          >
+          <a href="https://odin-lang.org" target="_blank" rel="noopener"
+            >Odin Language</a
+          >
+        </div>
+      </div>
+      <p class="copyright">
+        MIT License © 2026 • Built with ❤️ for the Odin community
+      </p>
+    </footer>
+
+    <script src="script.js"></script>
+  </body>
+</html>
