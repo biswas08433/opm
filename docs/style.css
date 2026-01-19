@@ -371,6 +371,12 @@ pre code {
   display: block;
 }
 
+.content {
+  max-width: 800px;
+  margin: 0 auto;
+  display: block;
+}
+
 .install-note {
   text-align: center;
   color: var(--text-secondary);
