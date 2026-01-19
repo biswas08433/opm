@@ -1,5 +1,7 @@
 # opm - Odin Package Manager
 
+> ⚠️ **Warning:** This tool is AI-generated. Bugs are common. Please [file an issue](https://github.com/biswas08433/opm/issues) if you find one.
+
 A CLI tool for managing Odin projects, packages, and compiler versions.
 
 ## Features
