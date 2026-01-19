@@ -30,11 +30,11 @@ function getAssetPattern(): string {
   const architecture = arch();
 
   if (os === "linux") {
-    return "ubuntu";
+    return architecture === "arm64" ? "odin-linux-arm64" : "odin-linux-amd64";
   } else if (os === "darwin") {
-    return architecture === "arm64" ? "macos-arm" : "macos";
+    return architecture === "arm64" ? "odin-macos-arm64" : "odin-macos-amd64";
   } else if (os === "win32") {
-    return "windows";
+    return "odin-windows-amd64";
   }
 
   throw new Error(`Unsupported platform: ${os}/${architecture}`);
@@ -185,18 +185,54 @@ export async function installVersion(version: string): Promise<void> {
 
   spinner.stop();
 
-  // Download the asset
+  // Download the asset with progress
   const downloadPath = `${OPM_CACHE_DIR}/${asset.name}`;
-  const downloadSpinner = log.spinner(`Downloading ${asset.name}...`);
+  const totalSize = asset.size;
+  const totalMB = (totalSize / 1024 / 1024).toFixed(1);
 
   const response = await fetch(asset.browser_download_url);
   if (!response.ok) {
-    downloadSpinner.stop(false);
     throw new Error(`Failed to download: ${response.statusText}`);
   }
 
-  await Bun.write(downloadPath, response);
-  downloadSpinner.stop();
+  const reader = response.body?.getReader();
+  if (!reader) {
+    throw new Error("Failed to get response body reader");
+  }
+
+  let receivedBytes = 0;
+  const chunks: Uint8Array[] = [];
+
+  process.stdout.write(
+    `\x1b[36m⠋\x1b[0m Downloading ${asset.name} (0% of ${totalMB} MB)`,
+  );
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    chunks.push(value);
+    receivedBytes += value.length;
+
+    const percent = Math.round((receivedBytes / totalSize) * 100);
+    const receivedMB = (receivedBytes / 1024 / 1024).toFixed(1);
+    process.stdout.write(
+      `\r\x1b[36m⠋\x1b[0m Downloading ${asset.name} (${percent}% - ${receivedMB}/${totalMB} MB)  `,
+    );
+  }
+
+  process.stdout.write(
+    `\r\x1b[32m✓\x1b[0m Downloaded ${asset.name} (${totalMB} MB)                    \n`,
+  );
+
+  // Combine chunks and write to file
+  const allChunks = new Uint8Array(receivedBytes);
+  let position = 0;
+  for (const chunk of chunks) {
+    allChunks.set(chunk, position);
+    position += chunk.length;
+  }
+  await Bun.write(downloadPath, allChunks);
 
   // Extract the archive
   const extractSpinner = log.spinner(`Extracting to ${versionDir}...`);
@@ -212,30 +248,6 @@ export async function installVersion(version: string): Promise<void> {
     }
   } else {
     await Bun.$`tar -xzf ${downloadPath} -C ${versionDir} --strip-components=1`.quiet();
-  }
-
-  // Build LLVM backend if needed (compile the compiler)
-  const buildSpinner = log.spinner("Building Odin compiler...");
-  try {
-    const cwd = versionDir;
-    // Check if we need to build
-    const odinBinary = Bun.file(`${versionDir}/odin`);
-    if (!(await odinBinary.exists())) {
-      // Try to build from source
-      const makeResult = await Bun.$`cd ${cwd} && make release 2>&1`
-        .quiet()
-        .nothrow();
-      if (makeResult.exitCode !== 0) {
-        // Maybe the binary already exists or needs different build
-        log.warn(
-          "Build step skipped (pre-built binary or requires manual setup)",
-        );
-      }
-    }
-    buildSpinner.stop();
-  } catch {
-    buildSpinner.stop();
-    log.dim("  Build step skipped");
   }
 
   // Make odin executable
