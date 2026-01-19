@@ -9,7 +9,7 @@ export const OPM_CONFIG_FILE = join(OPM_HOME, "config.json");
 
 // Project-specific paths
 export const PROJECT_CONFIG_FILE = "opm.json";
-export const PACKAGES_DIR = "odin_packages";
+export const PACKAGES_DIR = "packages";
 
 // GitHub API endpoints
 export const ODIN_REPO_API = "https://api.github.com/repos/odin-lang/Odin";

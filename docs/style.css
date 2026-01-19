@@ -539,6 +539,26 @@ td:first-child {
   font-size: 0.875rem;
 }
 
+/* Config note */
+.config-note {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  background: var(--bg-tertiary);
+  border-left: 3px solid var(--accent);
+  border-radius: 0 6px 6px 0;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.config-note strong {
+  color: var(--accent);
+}
+
+.config-note code {
+  background: var(--bg-secondary);
+  font-size: 0.85rem;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .nav {

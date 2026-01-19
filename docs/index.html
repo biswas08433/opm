@@ -294,9 +294,7 @@ opm run</code></pre>
     "raylib": "odin-lang/raylib-odin"
   },
   "scripts": {
-    "build": "odin build src -out:bin/${name}",
-    "run": "odin run src",
-    "test": "odin test tests"
+    "deploy": "scp bin/my-project user@server:/app/"
   },
   "build": {
     "src": "src",
@@ -304,6 +302,12 @@ opm run</code></pre>
     "flags": ["-debug"]
   }
 }</code></pre>
+      <p class="config-note">
+        <strong>Note:</strong> Commands <code>build</code>, <code>run</code>,
+        <code>test</code>, and <code>check</code> are automatically generated
+        from the <code>build</code> config. Use <code>scripts</code> for custom
+        commands only.
+      </p>
     </section>
 
     <footer class="footer">

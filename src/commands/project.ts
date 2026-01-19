@@ -36,12 +36,7 @@ export async function initProject(name?: string): Promise<void> {
     collections: {},
     dependencies: {},
     devDependencies: {},
-    scripts: {
-      build: "odin build src -out:bin/${name}",
-      run: "odin run src",
-      test: "odin test tests",
-      check: "odin check src",
-    },
+    scripts: {},
     build: {
       src: "src",
       out: "bin",
@@ -160,6 +155,32 @@ export async function showProject(): Promise<void> {
   }
 }
 
+// Reserved command names that are dynamically generated
+const RESERVED_COMMANDS = ["build", "run", "test", "check"] as const;
+type ReservedCommand = (typeof RESERVED_COMMANDS)[number];
+
+// Generate command based on build config
+function generateCommand(
+  command: ReservedCommand,
+  config: ProjectConfig,
+): string {
+  const src = config.build?.src || "src";
+  const out = config.build?.out || "bin";
+  const flags = config.build?.flags?.join(" ") || "";
+  const name = config.name;
+
+  switch (command) {
+    case "build":
+      return `odin build ${src} -out:${out}/${name}${flags ? " " + flags : ""}`;
+    case "run":
+      return `odin run ${src}${flags ? " " + flags : ""}`;
+    case "test":
+      return `odin test tests${flags ? " " + flags : ""}`;
+    case "check":
+      return `odin check ${src}${flags ? " " + flags : ""}`;
+  }
+}
+
 // Run a project script
 export async function runScript(
   scriptName: string,
@@ -173,28 +194,42 @@ export async function runScript(
     );
   }
 
-  // Look for script in config
-  const script = config.scripts?.[scriptName];
+  let command: string;
 
-  if (!script) {
-    throw new Error(
-      `Script '${scriptName}' not found in ${PROJECT_CONFIG_FILE}`,
-    );
+  // Check if it's a reserved command
+  if (RESERVED_COMMANDS.includes(scriptName as ReservedCommand)) {
+    command = generateCommand(scriptName as ReservedCommand, config);
+
+    // Create output directory for build command
+    if (scriptName === "build") {
+      const outDir = config.build?.out || "bin";
+      await Bun.$`mkdir -p ${outDir}`.quiet();
+    }
+  } else {
+    // Look for user-defined script
+    const script = config.scripts?.[scriptName];
+
+    if (!script) {
+      throw new Error(
+        `Script '${scriptName}' not found in ${PROJECT_CONFIG_FILE}`,
+      );
+    }
+
+    // Replace variables in user-defined scripts
+    const variables: Record<string, string> = {
+      name: config.name,
+      version: config.version,
+      src: config.build?.src || "src",
+      out: config.build?.out || "bin",
+    };
+
+    command = script;
+    for (const [key, value] of Object.entries(variables)) {
+      command = command.replaceAll(`\${${key}}`, value);
+    }
   }
 
-  const variables: Record<string, string> = {
-    name: config.name,
-    version: config.version,
-    src: config.build?.src || "src",
-    out: config.build?.out || "bin",
-  };
-
-  let command = script;
-  for (const [key, value] of Object.entries(variables)) {
-    command = command.replaceAll(`\${${key}}`, value);
-  }
-
-  log.info(`Running script: ${scriptName}`);
+  log.info(`Running: ${scriptName}`);
   log.dim(`  ${command}`);
   console.log();
 
@@ -202,7 +237,7 @@ export async function runScript(
   const fullCommand =
     args.length > 0 ? `${command} ${args.join(" ")}` : command;
 
-  // Run the script
+  // Run the command
   const result = await Bun.$`bash -c ${fullCommand}`
     .env({ ...process.env })
     .nothrow();
