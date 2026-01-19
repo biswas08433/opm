@@ -119,12 +119,33 @@ opm update pkg-name  # Update specific
 # Install all dependencies
 opm install
 
+# Install with frozen lockfile (CI/reproducible builds)
+opm install --frozen
+
 # List installed packages
 opm list
 
 # Search for packages
 opm search raylib
 ```
+
+#### Lockfile (opm.lock)
+
+opm uses a lockfile (`opm.lock`) to ensure deterministic, reproducible builds:
+
+- **Automatic**: When you add or install a package, opm records the exact commit hash
+- **Reproducible**: Running `opm install` will always install the same versions
+- **Frozen mode**: Use `opm install --frozen` in CI to fail if lockfile is missing or outdated
+
+```bash
+# Normal install - creates/updates lockfile
+opm install
+
+# Frozen install - requires exact lockfile match (for CI)
+opm install --frozen
+```
+
+**Tip:** Commit `opm.lock` to your repository for reproducible builds across machines.
 
 #### Package Specifiers
 
@@ -157,9 +178,6 @@ Projects use an `opm.json` file:
     "raylib": "odin_packages/raylib"
   },
   "scripts": {
-    "build": "odin build src -out:bin/${name}",
-    "run": "odin run src",
-    "test": "odin test tests",
     "custom": "echo 'custom script'"
   },
   "build": {
@@ -193,35 +211,10 @@ my-project/
 ├── tests/
 ├── bin/
 ├── odin_packages/      # Installed dependencies
-├── opm.json
+├── opm.json            # Project configuration
+├── opm.lock            # Lockfile for reproducible builds
 └── .gitignore
 ```
-
-## Commands Reference
-
-| Command                   | Description                  |
-| ------------------------- | ---------------------------- |
-| `opm versions`            | List available Odin versions |
-| `opm install <version>`   | Install Odin version         |
-| `opm use <version>`       | Switch to version            |
-| `opm uninstall <version>` | Remove version               |
-| `opm current`             | Show current version         |
-| `opm init [name]`         | Initialize project           |
-| `opm info`                | Show project info            |
-| `opm build`               | Build project                |
-| `opm run`                 | Run project                  |
-| `opm test`                | Run tests                    |
-| `opm check`               | Check for errors             |
-| `opm clean`               | Clean build artifacts        |
-| `opm add <pkg>`           | Add dependency               |
-| `opm add -D <pkg>`        | Add dev dependency           |
-| `opm remove <pkg>`        | Remove dependency            |
-| `opm update [pkg]`        | Update dependencies          |
-| `opm install`             | Install all dependencies     |
-| `opm list`                | List dependencies            |
-| `opm search <query>`      | Search packages              |
-| `opm help`                | Show help                    |
-| `opm --version`           | Show version                 |
 
 ## Development
 

@@ -99,12 +99,12 @@ opm versions</code></pre>
           <div class="feature-icon">📦</div>
           <h3>Package Management</h3>
           <p>
-            Add dependencies from GitHub repositories or local paths with simple
-            commands.
+            Add dependencies from GitHub with a lockfile for deterministic,
+            reproducible builds.
           </p>
           <pre><code>opm add user/repo
-opm add user/repo@v1.0.0
-opm remove package</code></pre>
+opm install --frozen  # CI mode
+opm update</code></pre>
         </div>
 
         <div class="feature-card">
@@ -272,6 +272,14 @@ opm run</code></pre>
             <tr>
               <td><code>opm update</code></td>
               <td>Update dependencies</td>
+            </tr>
+            <tr>
+              <td><code>opm update --check</code></td>
+              <td>Preview available updates</td>
+            </tr>
+            <tr>
+              <td><code>opm install --frozen</code></td>
+              <td>Install from lockfile (CI)</td>
             </tr>
             <tr>
               <td><code>opm search &lt;query&gt;</code></td>

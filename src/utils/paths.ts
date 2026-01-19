@@ -9,6 +9,7 @@ export const OPM_CONFIG_FILE = join(OPM_HOME, "config.json");
 
 // Project-specific paths
 export const PROJECT_CONFIG_FILE = "opm.json";
+export const LOCKFILE = "opm.lock";
 export const PACKAGES_DIR = "packages";
 
 // GitHub API endpoints

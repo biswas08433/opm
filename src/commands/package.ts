@@ -1,10 +1,15 @@
 import { log } from "../utils/logger";
-import { loadProjectConfig, saveProjectConfig } from "../utils/config";
 import {
-  PACKAGES_DIR,
-  PROJECT_CONFIG_FILE,
-  OPM_CACHE_DIR,
-} from "../utils/paths";
+  loadProjectConfig,
+  saveProjectConfig,
+  loadLockfile,
+  saveLockfile,
+  setLockfileEntry,
+  getLockfileEntry,
+  removeLockfileEntry,
+  type LockfileEntry,
+} from "../utils/config";
+import { PACKAGES_DIR, PROJECT_CONFIG_FILE, LOCKFILE } from "../utils/paths";
 
 interface PackageSource {
   type: "github" | "git" | "local";
@@ -95,6 +100,37 @@ function parsePackageSpec(spec: string): {
   throw new Error(`Invalid package specifier: ${spec}`);
 }
 
+// Get the current commit hash of a git repository
+async function getCommitHash(repoDir: string): Promise<string> {
+  const result = await Bun.$`cd ${repoDir} && git rev-parse HEAD`.quiet();
+  return result.stdout.toString().trim();
+}
+
+// Clone a repository at a specific commit (deterministic)
+async function cloneAtCommit(
+  url: string,
+  targetDir: string,
+  commit: string,
+): Promise<void> {
+  // Clone without checkout, then checkout specific commit
+  await Bun.$`git clone --no-checkout ${url} ${targetDir}`.quiet();
+  await Bun.$`cd ${targetDir} && git checkout ${commit}`.quiet();
+}
+
+// Clone a repository at a ref (branch/tag) and return the commit hash
+async function cloneAtRef(
+  url: string,
+  targetDir: string,
+  ref?: string,
+): Promise<string> {
+  if (ref) {
+    await Bun.$`git clone --depth 1 --branch ${ref} ${url} ${targetDir}`.quiet();
+  } else {
+    await Bun.$`git clone --depth 1 ${url} ${targetDir}`.quiet();
+  }
+  return await getCommitHash(targetDir);
+}
+
 // Install a package
 export async function addPackage(spec: string, isDev = false): Promise<void> {
   const config = await loadProjectConfig();
@@ -117,24 +153,36 @@ export async function addPackage(spec: string, isDev = false): Promise<void> {
   }
 
   const spinner = log.spinner(`Fetching ${name}...`);
+  const lockfile = await loadLockfile();
 
   try {
     await Bun.$`mkdir -p ${PACKAGES_DIR}`.quiet();
 
+    let commit: string;
+
     switch (source.type) {
       case "github":
       case "git": {
-        const refArgs = source.ref ? ["--branch", source.ref] : [];
-        await Bun.$`git clone --depth 1 ${refArgs} ${source.url} ${packageDir}`.quiet();
+        commit = await cloneAtRef(source.url, packageDir, source.ref);
         break;
       }
       case "local": {
         await Bun.$`ln -s ${source.url} ${packageDir}`.quiet();
+        commit = "local";
         break;
       }
     }
 
     spinner.stop();
+
+    // Update lockfile with exact commit
+    const lockEntry: LockfileEntry = {
+      specifier: spec,
+      resolved: source.url,
+      commit: commit!,
+    };
+    setLockfileEntry(lockfile, name, lockEntry);
+    await saveLockfile(lockfile);
 
     // Update project config
     const deps = isDev ? config.devDependencies : config.dependencies;
@@ -155,6 +203,7 @@ export async function addPackage(spec: string, isDev = false): Promise<void> {
     log.success(
       `Added ${name} to ${isDev ? "devDependencies" : "dependencies"}`,
     );
+    log.dim(`  Locked at commit: ${commit!.slice(0, 12)}`);
 
     // Show usage hint
     console.log();
@@ -209,12 +258,20 @@ export async function removePackage(name: string): Promise<void> {
 
   await saveProjectConfig(config);
 
+  // Update lockfile
+  const lockfile = await loadLockfile();
+  removeLockfileEntry(lockfile, name);
+  await saveLockfile(lockfile);
+
   spinner.stop();
   log.success(`Removed ${name}`);
 }
 
 // Update a specific package or all packages
-export async function updatePackage(name?: string): Promise<void> {
+export async function updatePackage(
+  name?: string,
+  dryRun: boolean = false,
+): Promise<void> {
   const config = await loadProjectConfig();
 
   if (!config) {
@@ -233,9 +290,12 @@ export async function updatePackage(name?: string): Promise<void> {
     return;
   }
 
-  log.header("Updating packages");
+  log.header(dryRun ? "Checking for updates" : "Updating packages");
 
-  for (const [pkgName] of Object.entries(packagesToUpdate)) {
+  const lockfile = await loadLockfile();
+  let lockfileChanged = false;
+
+  for (const [pkgName, spec] of Object.entries(packagesToUpdate)) {
     const packageDir = `${PACKAGES_DIR}/${pkgName}`;
     const isGit = await Bun.file(`${packageDir}/.git/config`).exists();
 
@@ -244,20 +304,83 @@ export async function updatePackage(name?: string): Promise<void> {
       continue;
     }
 
-    const spinner = log.spinner(`Updating ${pkgName}...`);
+    const spinner = log.spinner(
+      dryRun ? `Checking ${pkgName}...` : `Updating ${pkgName}...`,
+    );
 
     try {
-      await Bun.$`cd ${packageDir} && git pull --ff-only`.quiet();
-      spinner.stop();
+      const oldCommit = await getCommitHash(packageDir);
+
+      if (dryRun) {
+        // Fetch without merging to check for updates
+        await Bun.$`cd ${packageDir} && git fetch`.quiet();
+        const result =
+          await Bun.$`cd ${packageDir} && git rev-parse FETCH_HEAD`.quiet();
+        const remoteCommit = result.text().trim();
+
+        spinner.stop();
+        if (oldCommit !== remoteCommit) {
+          // Get commit count and messages
+          const logResult =
+            await Bun.$`cd ${packageDir} && git log --oneline ${oldCommit}..FETCH_HEAD`.quiet();
+          const commits = logResult.text().trim().split("\n").filter(Boolean);
+          log.warn(
+            `  ${pkgName}: ${oldCommit.slice(0, 8)} → ${remoteCommit.slice(0, 8)} (${commits.length} commit${commits.length === 1 ? "" : "s"})`,
+          );
+          // Show first 3 commit messages
+          for (const commit of commits.slice(0, 3)) {
+            log.dim(`    ${commit}`);
+          }
+          if (commits.length > 3) {
+            log.dim(`    ... and ${commits.length - 3} more`);
+          }
+          lockfileChanged = true; // Reuse to track if updates available
+        } else {
+          log.dim(`  ${pkgName}: up to date`);
+        }
+      } else {
+        // Actually update
+        await Bun.$`cd ${packageDir} && git pull --ff-only`.quiet();
+        const newCommit = await getCommitHash(packageDir);
+
+        if (oldCommit !== newCommit) {
+          // Update lockfile with new commit
+          const existingEntry = getLockfileEntry(lockfile, pkgName);
+          setLockfileEntry(lockfile, pkgName, {
+            specifier: spec || existingEntry?.specifier || pkgName,
+            resolved: existingEntry?.resolved || "",
+            commit: newCommit,
+          });
+          lockfileChanged = true;
+          spinner.stop();
+          log.success(
+            `  ${pkgName}: ${oldCommit.slice(0, 8)} → ${newCommit.slice(0, 8)}`,
+          );
+        } else {
+          spinner.stop();
+          log.dim(`  ${pkgName}: already up to date`);
+        }
+      }
     } catch {
       spinner.stop(false);
-      log.warn(`  Failed to update ${pkgName}`);
+      log.warn(`  Failed to ${dryRun ? "check" : "update"} ${pkgName}`);
     }
+  }
+
+  if (dryRun) {
+    if (lockfileChanged) {
+      log.info("\nRun 'opm update' to apply these updates");
+    } else {
+      log.success("All packages are up to date");
+    }
+  } else if (lockfileChanged) {
+    await saveLockfile(lockfile);
+    log.success(`Updated ${LOCKFILE}`);
   }
 }
 
 // Install all dependencies from opm.json
-export async function installPackages(): Promise<void> {
+export async function installPackages(frozen: boolean = false): Promise<void> {
   const config = await loadProjectConfig();
 
   if (!config) {
@@ -276,6 +399,20 @@ export async function installPackages(): Promise<void> {
     return;
   }
 
+  const lockfile = await loadLockfile();
+  let lockfileChanged = false;
+
+  // In frozen mode, all packages must be in lockfile
+  if (frozen) {
+    for (const name of Object.keys(allDeps)) {
+      if (!getLockfileEntry(lockfile, name)) {
+        throw new Error(
+          `Package "${name}" not found in lockfile. Run 'opm install' without --frozen first.`,
+        );
+      }
+    }
+  }
+
   log.header(`Installing ${depCount} package${depCount > 1 ? "s" : ""}`);
 
   for (const [name, spec] of Object.entries(allDeps)) {
@@ -283,7 +420,23 @@ export async function installPackages(): Promise<void> {
     const exists = await Bun.file(`${packageDir}/.git/config`).exists();
 
     if (exists) {
-      log.dim(`  ${name} already installed`);
+      // Verify commit matches lockfile if frozen
+      if (frozen) {
+        const lockEntry = getLockfileEntry(lockfile, name);
+        if (lockEntry?.commit) {
+          const currentCommit = await getCommitHash(packageDir);
+          if (currentCommit !== lockEntry.commit) {
+            log.warn(
+              `  ${name} commit mismatch, checking out ${lockEntry.commit.slice(0, 8)}`,
+            );
+            await Bun.$`cd ${packageDir} && git fetch && git checkout ${lockEntry.commit}`.quiet();
+          } else {
+            log.dim(`  ${name} already at ${currentCommit.slice(0, 8)}`);
+          }
+        }
+      } else {
+        log.dim(`  ${name} already installed`);
+      }
       continue;
     }
 
@@ -293,11 +446,36 @@ export async function installPackages(): Promise<void> {
 
       await Bun.$`mkdir -p ${PACKAGES_DIR}`.quiet();
 
+      // Check if we have a lockfile entry with a commit hash
+      const lockEntry = getLockfileEntry(lockfile, name);
+
       switch (source.type) {
         case "github":
         case "git": {
-          const refArgs = source.ref ? ["--branch", source.ref] : [];
-          await Bun.$`git clone --depth 1 ${refArgs} ${source.url} ${packageDir}`.quiet();
+          if (lockEntry?.commit) {
+            // Deterministic: clone at exact commit
+            await cloneAtCommit(source.url, lockEntry.commit, packageDir);
+          } else if (source.ref) {
+            // Clone at ref and record commit
+            await cloneAtRef(source.url, source.ref, packageDir);
+            const commit = await getCommitHash(packageDir);
+            setLockfileEntry(lockfile, name, {
+              specifier: spec,
+              resolved: source.url,
+              commit,
+            });
+            lockfileChanged = true;
+          } else {
+            // Clone default branch and record commit
+            await Bun.$`git clone --depth 1 ${source.url} ${packageDir}`.quiet();
+            const commit = await getCommitHash(packageDir);
+            setLockfileEntry(lockfile, name, {
+              specifier: spec,
+              resolved: source.url,
+              commit,
+            });
+            lockfileChanged = true;
+          }
           break;
         }
         case "local": {
@@ -318,6 +496,11 @@ export async function installPackages(): Promise<void> {
 
   // Save updated collections
   await saveProjectConfig(config);
+
+  if (lockfileChanged) {
+    await saveLockfile(lockfile);
+    log.success(`Updated ${LOCKFILE}`);
+  }
 
   log.success("All packages installed");
 }

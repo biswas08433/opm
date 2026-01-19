@@ -58,7 +58,9 @@ const HELP = `
   add -D <package>          Add a dev dependency
   remove <package>          Remove a dependency
   update [package]          Update dependencies
+  update --check            Preview available updates
   i, install                Install all dependencies
+  install --frozen          Install from lockfile (deterministic)
   list                      List installed packages
   search <query>            Search for packages on GitHub
 
@@ -97,13 +99,18 @@ async function main() {
       case "install":
         if (rest.length === 0) {
           // Install dependencies if no version specified
-          await installPackages();
+          await installPackages(false);
+        } else if (rest[0] === "--frozen" || rest[0] === "-f") {
+          // Frozen install mode - fail if lockfile is missing or outdated
+          await installPackages(true);
         } else if (
           rest[0] &&
           (rest[0].startsWith("-") || rest[0].includes("/"))
         ) {
           // Looks like a package, not a version
-          await installPackages();
+          await installPackages(
+            rest.includes("--frozen") || rest.includes("-f"),
+          );
         } else if (rest[0]) {
           await installVersion(rest[0]);
         } else {
@@ -113,7 +120,7 @@ async function main() {
         break;
 
       case "i":
-        await installPackages();
+        await installPackages(rest.includes("--frozen") || rest.includes("-f"));
         break;
 
       case "use":
@@ -187,9 +194,12 @@ async function main() {
         break;
 
       case "update":
-      case "upgrade":
-        await updatePackage(rest[0]);
+      case "upgrade": {
+        const dryRun = rest.includes("--check") || rest.includes("--dry-run");
+        const pkgName = rest.find((arg) => !arg.startsWith("--"));
+        await updatePackage(pkgName, dryRun);
         break;
+      }
 
       case "list":
         await listPackages();
