@@ -1,0 +1,30 @@
+{
+  "name": "opm",
+  "version": "0.1.0",
+  "description": "Odin Package Manager - manage Odin projects, packages, and compiler versions",
+  "type": "module",
+  "bin": {
+    "opm": "./src/cli.ts"
+  },
+  "scripts": {
+    "start": "bun run src/cli.ts",
+    "dev": "bun --watch src/cli.ts",
+    "build": "bun build src/cli.ts --compile --outfile opm",
+    "test": "bun test",
+    "link": "bun link"
+  },
+  "keywords": [
+    "odin",
+    "package-manager",
+    "version-manager",
+    "cli"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  }
+}
