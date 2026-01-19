@@ -6,10 +6,10 @@ A CLI tool for managing Odin projects, packages, and compiler versions.
 
 ## Features
 
-- 🔧 **Version Management** - Install, switch, and manage multiple Odin compiler versions
-- 📦 **Package Management** - Add dependencies from GitHub or local paths
-- 🚀 **Project Management** - Initialize, build, run, and test Odin projects
-- ⚡ **Fast** - Built with Bun for maximum performance
+- **Version Management** - Install, switch, and manage multiple Odin compiler versions
+- **Package Management** - Add dependencies from GitHub or local paths
+- **Project Management** - Initialize, build, run, and test Odin projects
+- **Fast** - Built with Bun for maximum performance
 
 ## Installation
 
@@ -21,7 +21,7 @@ A CLI tool for managing Odin projects, packages, and compiler versions.
 ### Install from source
 
 ```bash
-git clone https://github.com/your-username/opm.git
+git clone https://github.com/biswas08433/opm.git
 cd opm
 bun install
 bun link
