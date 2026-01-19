@@ -7,15 +7,29 @@ import {
 } from "../utils/config";
 import { PROJECT_CONFIG_FILE, getCurrentVersionLink } from "../utils/paths";
 import { getCurrentVersion } from "./version";
-import { basename } from "path";
+import { basename, join } from "path";
+import { mkdir } from "fs/promises";
 
 // Initialize a new Odin project
 export async function initProject(name?: string): Promise<void> {
-  const cwd = process.cwd();
-  const projectName = name || basename(cwd);
+  let projectDir = process.cwd();
+  let projectName: string;
+
+  if (name) {
+    // Create a new folder with the given name
+    projectName = name;
+    projectDir = join(process.cwd(), name);
+
+    // Create the project directory
+    await mkdir(projectDir, { recursive: true });
+    log.info(`Created directory: ${name}/`);
+  } else {
+    // Use current directory
+    projectName = basename(projectDir);
+  }
 
   // Check if already initialized
-  if (await projectConfigExists(cwd)) {
+  if (await projectConfigExists(projectDir)) {
     throw new Error(`Project already initialized. See ${PROJECT_CONFIG_FILE}`);
   }
 
@@ -45,13 +59,15 @@ export async function initProject(name?: string): Promise<void> {
   };
 
   // Save project config
-  await saveProjectConfig(config, cwd);
+  await saveProjectConfig(config, projectDir);
 
   // Create directory structure
-  await Bun.$`mkdir -p src bin tests`.quiet();
+  await mkdir(join(projectDir, "src"), { recursive: true });
+  await mkdir(join(projectDir, "bin"), { recursive: true });
+  await mkdir(join(projectDir, "tests"), { recursive: true });
 
   // Create a basic main.odin file
-  const mainFile = Bun.file(`${cwd}/src/main.odin`);
+  const mainFile = Bun.file(join(projectDir, "src/main.odin"));
   if (!(await mainFile.exists())) {
     await Bun.write(
       mainFile,
@@ -67,7 +83,7 @@ main :: proc() {
   }
 
   // Create .gitignore
-  const gitignore = Bun.file(`${cwd}/.gitignore`);
+  const gitignore = Bun.file(join(projectDir, ".gitignore"));
   if (!(await gitignore.exists())) {
     await Bun.write(
       gitignore,
@@ -107,6 +123,9 @@ Thumbs.db
 
   console.log();
   log.info("Get started:");
+  if (name) {
+    console.log(`  cd ${name}`);
+  }
   console.log("  opm run        # Run the project");
   console.log("  opm build      # Build the project");
   console.log("  opm add <pkg>  # Add a dependency");
