@@ -25,6 +25,8 @@ export async function initProject(name?: string): Promise<void> {
   const currentVersion = await getCurrentVersion();
 
   const config: ProjectConfig = {
+    $schema:
+      "https://raw.githubusercontent.com/biswas08433/opm/main/schema/opm.schema.json",
     name: projectName,
     version: "0.1.0",
     description: "",
@@ -171,18 +173,7 @@ export async function runScript(
     );
   }
 
-  // Check for built-in commands first
-  if (
-    scriptName === "build" ||
-    scriptName === "run" ||
-    scriptName === "test" ||
-    scriptName === "check"
-  ) {
-    await runOdinCommand(scriptName, config, args);
-    return;
-  }
-
-  // Look for custom script
+  // Look for script in config
   const script = config.scripts?.[scriptName];
 
   if (!script) {
@@ -191,67 +182,30 @@ export async function runScript(
     );
   }
 
+  const variables: Record<string, string> = {
+    name: config.name,
+    version: config.version,
+    src: config.build?.src || "src",
+    out: config.build?.out || "bin",
+  };
+
+  let command = script;
+  for (const [key, value] of Object.entries(variables)) {
+    command = command.replaceAll(`\${${key}}`, value);
+  }
+
   log.info(`Running script: ${scriptName}`);
-  log.dim(`  ${script}`);
+  log.dim(`  ${command}`);
   console.log();
 
-  // Replace variables in script
-  let command = script
-    .replace(/\$\{name\}/g, config.name)
-    .replace(/\$\{version\}/g, config.version);
+  // Append extra args if provided
+  const fullCommand =
+    args.length > 0 ? `${command} ${args.join(" ")}` : command;
 
   // Run the script
-  const result = await Bun.$`bash -c ${command} ${args}`.nothrow();
-
-  if (result.exitCode !== 0) {
-    process.exit(result.exitCode);
-  }
-}
-
-// Run odin commands directly
-async function runOdinCommand(
-  command: "build" | "run" | "test" | "check",
-  config: ProjectConfig,
-  args: string[],
-): Promise<void> {
-  const odinPath = `${getCurrentVersionLink()}/odin`;
-
-  // Check if odin is available
-  const odinExists = await Bun.file(odinPath).exists();
-  let odinCommand = odinExists ? odinPath : "odin";
-
-  const srcDir = config.build?.src || "src";
-  const outDir = config.build?.out || "bin";
-  const flags = config.build?.flags || [];
-
-  let cmdArgs: string[] = [];
-
-  switch (command) {
-    case "build":
-      await Bun.$`mkdir -p ${outDir}`.quiet();
-      cmdArgs = [
-        command,
-        srcDir,
-        `-out:${outDir}/${config.name}`,
-        ...flags,
-        ...args,
-      ];
-      break;
-    case "run":
-      cmdArgs = [command, srcDir, ...flags, ...args];
-      break;
-    case "test":
-      cmdArgs = [command, "tests", ...flags, ...args];
-      break;
-    case "check":
-      cmdArgs = [command, srcDir, ...flags, ...args];
-      break;
-  }
-
-  log.info(`odin ${cmdArgs.join(" ")}`);
-  console.log();
-
-  const result = await Bun.$`${odinCommand} ${cmdArgs}`.nothrow();
+  const result = await Bun.$`bash -c ${fullCommand}`
+    .env({ ...process.env })
+    .nothrow();
 
   if (result.exitCode !== 0) {
     process.exit(result.exitCode);
