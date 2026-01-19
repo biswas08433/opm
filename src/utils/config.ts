@@ -9,6 +9,7 @@ export interface OpmConfig {
 
 // Project configuration (opm.json)
 export interface ProjectConfig {
+  $schema?: string;
   name: string;
   version: string;
   description?: string;

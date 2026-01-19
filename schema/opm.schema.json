@@ -1,0 +1,114 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/biswas08433/opm/main/schema/opm.schema.json",
+  "title": "OPM Project Configuration",
+  "description": "Configuration file for Odin Package Manager (opm) projects",
+  "type": "object",
+  "required": ["name", "version"],
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "The name of the project",
+      "pattern": "^[a-zA-Z][a-zA-Z0-9_-]*$"
+    },
+    "version": {
+      "type": "string",
+      "description": "The version of the project (semver recommended)",
+      "pattern": "^\\d+\\.\\d+\\.\\d+(-[a-zA-Z0-9.]+)?$",
+      "examples": ["0.1.0", "1.0.0", "2.1.0-beta.1"]
+    },
+    "description": {
+      "type": "string",
+      "description": "A brief description of the project"
+    },
+    "author": {
+      "type": "string",
+      "description": "The author of the project"
+    },
+    "license": {
+      "type": "string",
+      "description": "The license of the project",
+      "examples": ["MIT", "Apache-2.0", "GPL-3.0", "BSD-3-Clause"]
+    },
+    "odinVersion": {
+      "type": "string",
+      "description": "The required Odin compiler version",
+      "examples": ["dev-2024-01", "dev-2025-12"]
+    },
+    "collections": {
+      "type": "object",
+      "description": "Odin collection mappings (name -> path)",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "dependencies": {
+      "type": "object",
+      "description": "Project dependencies",
+      "additionalProperties": {
+        "type": "string",
+        "description": "Package specifier (e.g., 'user/repo', 'user/repo@v1.0.0', 'path:/local/path')"
+      }
+    },
+    "devDependencies": {
+      "type": "object",
+      "description": "Development-only dependencies",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "scripts": {
+      "type": "object",
+      "description": "Custom scripts. Available variables: ${name}, ${version}, ${src}, ${out}",
+      "properties": {
+        "build": {
+          "type": "string",
+          "description": "Build the project",
+          "default": "odin build src -out:bin/${name}"
+        },
+        "run": {
+          "type": "string",
+          "description": "Run the project",
+          "default": "odin run src"
+        },
+        "test": {
+          "type": "string",
+          "description": "Run tests",
+          "default": "odin test tests"
+        },
+        "check": {
+          "type": "string",
+          "description": "Check for errors",
+          "default": "odin check src"
+        }
+      },
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "build": {
+      "type": "object",
+      "description": "Build configuration",
+      "properties": {
+        "src": {
+          "type": "string",
+          "description": "Source directory",
+          "default": "src"
+        },
+        "out": {
+          "type": "string",
+          "description": "Output directory",
+          "default": "bin"
+        },
+        "flags": {
+          "type": "array",
+          "description": "Additional Odin compiler flags",
+          "items": {
+            "type": "string"
+          },
+          "examples": [["-debug"], ["-o:speed", "-no-bounds-check"]]
+        }
+      }
+    }
+  }
+}
