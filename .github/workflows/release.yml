@@ -1,0 +1,112 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: bun-linux-x64
+            artifact: opm-linux-x64
+          - os: macos-latest
+            target: bun-darwin-arm64
+            artifact: opm-macos-arm64
+          - os: macos-13
+            target: bun-darwin-x64
+            artifact: opm-macos-x64
+          - os: windows-latest
+            target: bun-windows-x64
+            artifact: opm-windows-x64.exe
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Build binary
+        run: bun build src/cli.ts --compile --outfile ${{ matrix.artifact }}
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: ${{ matrix.artifact }}
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Get version from package.json
+        id: version
+        run: |
+          VERSION=$(jq -r '.version' package.json)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=v$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Prepare release files
+        run: |
+          mkdir -p release
+          mv artifacts/opm-linux-x64/opm-linux-x64 release/
+          mv artifacts/opm-macos-arm64/opm-macos-arm64 release/
+          mv artifacts/opm-macos-x64/opm-macos-x64 release/
+          mv artifacts/opm-windows-x64.exe/opm-windows-x64.exe release/
+          chmod +x release/opm-*
+          ls -la release/
+
+      - name: Check if tag exists
+        id: check_tag
+        run: |
+          if git rev-parse "${{ steps.version.outputs.tag }}" >/dev/null 2>&1; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create Release
+        if: steps.check_tag.outputs.exists == 'false'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: opm ${{ steps.version.outputs.tag }}
+          generate_release_notes: true # Auto-generates from commits and PRs
+          files: |
+            release/opm-linux-x64
+            release/opm-macos-arm64
+            release/opm-macos-x64
+            release/opm-windows-x64.exe
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update existing release
+        if: steps.check_tag.outputs.exists == 'true'
+        run: |
+          echo "Tag ${{ steps.version.outputs.tag }} already exists. Skipping release creation."
+          echo "To create a new release, update the version in package.json"
