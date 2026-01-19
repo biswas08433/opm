@@ -1,6 +1,6 @@
 {
   "name": "opm",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Odin Package Manager - manage Odin projects, packages, and compiler versions",
   "type": "module",
   "bin": {
